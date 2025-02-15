@@ -1,6 +1,7 @@
 import {useLayoutEffect, useState} from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import rough from 'roughjs/bundled/rough.esm.js'
+
+const generator = rough.generator()
 
 function App() {
 
@@ -8,9 +9,9 @@ function App() {
     const canvas = document.getElementById('canvas')
     const ctx = canvas.getContext('2d')
 
-    ctx.fillStyle = 'green'
-    ctx.fillRect(10, 10, 150, 100)
-    ctx.strokeRect(200, 200, 100, 100)
+    const roughCanvas = rough.canvas(canvas)
+    const rect = generator.rectangle(10, 10, 100, 100)
+    roughCanvas.draw(rect)
   }, []);
 
   return (

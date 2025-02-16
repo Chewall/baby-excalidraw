@@ -112,9 +112,14 @@ const resizeCoordinates = (clientX, clientY, position, coordinates) => {
   }
 };
 
+const useHistory = (initialState) => {
+  const [elements, setElements] = useState(initialState) //测试是否记录成功: [{…}, {…}]
+  return [elements, setElements]
+}
+
 // 主组件
 function App() {
-  const [elements, setElements] = useState([]); // 存储所有元素
+  const [elements, setElements] = useHistory([]); // 存储所有元素
   const [action, setAction] = useState('none'); // 当前操作状态
   const [tool, setTool] = useState('line'); // 当前工具类型（线条或矩形）
   const [selectedElement, setSelectedElement] = useState(null); // 当前选中的元素

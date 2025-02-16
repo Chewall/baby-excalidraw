@@ -1,0 +1,14 @@
+graph TD
+    A[用户按住图形的边缘/角点] --> B[触发 onMouseDown 方法]
+    B --> C{positionWithinElement 检测鼠标位置}
+    C -->|是| D[设置 selectedElement 和操作类型 setSelectedElement]
+    C -->|否| E[退出调整模式]
+    D --> F[触发 onMouseMove 方法]
+    F --> G{action === 'resizing'?}
+    G -->|是| H[计算新坐标 resizeCoordinates]
+    H --> I[更新图形尺寸 updateElement]
+    G -->|否| J[不做任何操作]
+    I --> K[鼠标松开]
+    K --> L[触发 onMouseUp 方法]
+    L --> M[调整并固定最终坐标 adjustElementCoordinates]
+    M --> N[退出调整模式 setAction]

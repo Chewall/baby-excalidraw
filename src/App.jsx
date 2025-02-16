@@ -113,8 +113,15 @@ const resizeCoordinates = (clientX, clientY, position, coordinates) => {
 };
 
 const useHistory = (initialState) => {
-  const [elements, setElements] = useState(initialState) //测试是否记录成功: [{…}, {…}]
-  return [elements, setElements]
+  const [index, setIndex] = useState(0)
+  const [history, setHistory] = useState([initialState]) //history为: [[{…}], [{…}]]
+
+  const setState = (action) => {
+    const newState = typeof action === 'function' ? action(history[index]) : action
+    setHistory((prevState) => [...prevState, newState])
+    setIndex(prevState => prevState+1)
+  }
+  return [history[index], setState]
 }
 
 // 主组件

@@ -74,7 +74,9 @@ function App() {
     if (tool === 'selection') {
       const element = getElementAtPosition(clientX, clientY, elements)
       if (element){
-        setSelectedElement(element)
+        const offsetX = clientX - element.x1
+        const offsetY = clientY - element.y1
+        setSelectedElement({...element, offsetX, offsetY})
         setAction('moving')
       }
     } else {
@@ -88,15 +90,22 @@ function App() {
 
   const handleMouseMove = (event) => {
     const { clientX, clientY } = event
+
+    if (tool === 'selection') {
+      event.target.style.cursor = getElementAtPosition(clientX, clientY, elements)
+      ? 'move' : 'default'
+    }
     if (action === 'drawing') {
       const index = elements.length - 1
       const { x1, y1 } = elements[index]
       updateElement(index, x1, y1, clientX, clientY, tool)
     }else if(action === 'moving') {
-      const { id, x1, x2, y1, y2, type } = selectedElement
+      const { id, x1, x2, y1, y2, type, offsetX, offsetY } = selectedElement
       const width = x2 - x1
       const height = y2 - y1
-      updateElement(id, clientX, clientY, clientX + width, clientY + height, type )
+      const nexX1 = clientX - offsetX
+      const nexY1 = clientY - offsetY
+      updateElement(id, nexX1, nexY1, nexX1 + width, nexY1 + height, type )
     }
 
 

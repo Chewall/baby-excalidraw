@@ -127,12 +127,16 @@ const useHistory = (initialState) => {
       setIndex(prevState => prevState+1)
     }
   }
-  return [history[index], setState]
+  
+  const undo = () => index > 0 && setIndex(prevState => prevState - 1)
+  const redo = () => index < history.length - 1 && setIndex(prevState => prevState + 1)
+  
+  return [history[index], setState, undo, redo]
 }
 
 // 主组件
 function App() {
-  const [elements, setElements] = useHistory([]); // 存储所有元素
+  const [elements, setElements, undo, redo] = useHistory([]); // 存储所有元素
   const [action, setAction] = useState('none'); // 当前操作状态
   const [tool, setTool] = useState('line'); // 当前工具类型（线条或矩形）
   const [selectedElement, setSelectedElement] = useState(null); // 当前选中的元素
@@ -259,6 +263,10 @@ function App() {
           onChange={() => setTool("rectangle")}
         />
         <label htmlFor="rectangle">Rectangle</label>
+      </div>
+      <div style={{position: 'fixed', bottom: 0, padding: 10}}>
+        <button onClick={undo}>Undo</button>
+        <button onClick={redo}>Redo</button>
       </div>
 
       {/* Canvas 画布 */}

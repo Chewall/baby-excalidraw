@@ -170,6 +170,7 @@ function App() {
         const offsetX = clientX - element.x1
         const offsetY = clientY - element.y1
         setSelectedElement({ ...element, offsetX, offsetY })
+        setElements(prevState => prevState)
         if (element.position === "inside") {
           setAction("moving");
         } else {

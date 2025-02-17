@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState } from 'react'
+import {useEffect, useLayoutEffect, useState} from 'react'
 import rough from 'roughjs/bundled/rough.esm.js'
 
 // 初始化 RoughJS 的 generator 实例，用于生成图形
@@ -151,6 +151,24 @@ function App() {
     const roughCanvas = rough.canvas(canvas)
     elements.forEach(({ roughElement }) => roughCanvas.draw(roughElement))
   }, [elements]);
+
+
+  useEffect(() => {
+    const undoRedoFunction = (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === 'z') {
+        if (event.shiftKey) {
+          redo()
+        } else {
+          undo()
+        }
+      }
+    }
+    document.addEventListener('keydown', undoRedoFunction)
+
+    return () => {
+      document.removeEventListener('keydown', undoRedoFunction)
+    }
+  }, [undo, redo]);
 
   // 更新元素（用于绘制或调整）
   const updateElement = (id, x1, y1, x2, y2, type) => {

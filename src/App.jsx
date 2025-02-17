@@ -116,10 +116,16 @@ const useHistory = (initialState) => {
   const [index, setIndex] = useState(0)
   const [history, setHistory] = useState([initialState]) //history为: [[{…}], [{…}]]
 
-  const setState = (action) => {
+  const setState = (action, overwrite = false) => {
     const newState = typeof action === 'function' ? action(history[index]) : action
-    setHistory((prevState) => [...prevState, newState])
-    setIndex(prevState => prevState+1)
+    if (overwrite) {
+      const historyCopy = [...history]
+      historyCopy[index] = newState
+      setHistory(historyCopy)
+    } else {
+      setHistory((prevState) => [...prevState, newState])
+      setIndex(prevState => prevState+1)
+    }
   }
   return [history[index], setState]
 }
@@ -147,7 +153,7 @@ function App() {
 
     const elementsCopy = [...elements]
     elementsCopy[id] = updateElement
-    setElements(elementsCopy)
+    setElements(elementsCopy, true)
   }
 
   // 鼠标按下事件

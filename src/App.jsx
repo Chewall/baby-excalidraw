@@ -28,34 +28,50 @@ const nearPoint = (x, y, x1, y1, name) => {
   return Math.abs(x - x1) < 5 && Math.abs(y - y1) < 5 ? name : null
 }
 
-// 判断点是否在元素（矩形或线条）内，并返回相应位置
+const onLine = (x1, y1, x2, y2, x, y, maxDistance = 1) => {
+  const a = { x: x1, y: y1 };
+  const b = { x: x2, y: y2 };
+  const c = { x, y };
+
+  const offset = distance(a, b) - (distance(a, c) + distance(b, c));
+  return Math.abs(offset) < maxDistance ? "inside" : null;
+};
+
+// 判断点是否在元素内，并返回相应位置
 const positionWithinElement = (x, y, element) => {
-  const { type, x1, x2, y1, y2 } = element;
+  const { type, x1, y1, x2, y2 } = element;
 
-  if (type === "rectangle") {
-    // 检查是否接近矩形的四个角，或是否在矩形内部
-    const topLeft = nearPoint(x, y, x1, y1, 'tl')
-    const topRight = nearPoint(x, y, x2, y1, 'tr')
-    const bottomLeft = nearPoint(x, y, x1, y2, 'bl')
-    const bottomRight = nearPoint(x, y, x2, y2, 'br')
-    const inside = x >= x1 && x <= x2 && y >= y1 && y <= y2 ? 'inside' : null
-    return topLeft || topRight || bottomLeft || bottomRight || inside
-  } else {
-    // 如果是线段，计算点与线段的关系
-    const a = { x: x1, y: y1 }; // 线段的起点
-    const b = { x: x2, y: y2 }; // 线段的终点
-    const c = { x, y }; // 待检查的点
+  switch (type) {
+    case "line":{
+      const on = onLine(x1, y1, x2, y2, x, y);
+      const start = nearPoint(x, x1, y1);
+      const end = nearPoint(x, x2, y2);
+      return start && end || on;
+    }
 
-    // 判断点是否在线段上：通过计算偏移量（即线段长度 - 两段总长度）
-    const offset = distance(a, b) - (distance(a, c) + distance(b, c));
+    case "rectangle":{
+      const topLeft = nearPoint(x, x1, y1);
+      const topRight = nearPoint(x, x2, y1);
+      const bottomLeft = nearPoint(x, x1, y2);
+      const bottomRight = nearPoint(x, x2, y2);
+      const inside = x >= x1 && x <= x2 && y >= y1 && y <= y2 ? "inside" : null;
+      return topLeft || topRight || bottomLeft || bottomRight || inside;
+    }
 
-    const start = nearPoint(x, y, x1, y1, 'start') // 起点
-    const end = nearPoint(x, y, x2, y2, 'end') // 终点
-    const inside = Math.abs(offset) < 1 ? 'inside' : null // 判断点是否在线段上
+    case "pencil":{
+      const betweenAnyPoint = element.points.some((point, index) => {
+        const nextPoint = element.points[index + 1];
+        if (!nextPoint) return false;
+        return onLine(point.x, point.y, nextPoint.x, nextPoint.y, x, y, 5) != null;
+      });
+      return betweenAnyPoint ? "inside" : null;
+    }
 
-    return start || end || inside
+    default:
+      throw new Error(`Type not recognised: ${type}`);
   }
 };
+
 
 // 计算两点之间的距离
 const distance = (a, b) =>
@@ -171,6 +187,14 @@ const drawElement = (roughCanvas, context, element) => {
       { const stroke = getSvgPathFromStroke(getStroke(element.points))
       context.fill(new Path2D(stroke))
       break; }
+      // {
+      //   console.log("Debug__element :", element.points)
+      //   const resGetStroke = getStroke(element.points)
+      //   console.log("Debug__resGetStroke :", typeof(resGetStroke),resGetStroke)
+      //   const stroke = getSvgPathFromStroke(resGetStroke)
+      //   console.log("Debug__stroke :", stroke)
+      //   context.fill(new Path2D(stroke))
+      //   break; }
     default:
       throw new Error(`Type not recognised: ${element.type}`);
   }

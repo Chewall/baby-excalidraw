@@ -1,19 +1,28 @@
 import {useEffect, useLayoutEffect, useState} from 'react'
 import rough from 'roughjs/bundled/rough.esm.js'
+import getStroke from 'perfect-freehand'
 
 // 初始化 RoughJS 的 generator 实例，用于生成图形
 const generator = rough.generator()
 
-// 创建绘图元素（线条或矩形）
-function createElement(id, x1, y1, x2, y2, type) {
-  // 根据类型生成对应的 RoughJS 图形
-  const roughElement =
-    type === 'line'
-      ? generator.line(x1, y1, x2, y2) // 创建线条
-      : generator.rectangle(x1, y1, x2 - x1, y2 - y1); // 创建矩形
-  return { id, x1, y1, x2, y2, type, roughElement } // 返回元素的定义
-}
+// 创建绘图元素
+const createElement = (id, x1, y1, x2, y2, type) => {
+  switch (type) {
+    case "line":
+    case "rectangle":
+      { const roughElement = type === "line"
+        ? generator.line(x1, y1, x2, y2)
+        : generator.rectangle(x1, y1, x2 - x1, y2 - y1
+        );
+      return { id, x1, y1, x2, y2, type, roughElement }; }
 
+    case "pencil":
+      return { id, type, points: [{ x: x1, y: y1 }] };
+
+    default:
+      throw new Error(`Type not recognised: ${type}`);
+  }
+};
 // 判断某个点是否接近目标点（用于操作时判断是否接近顶点）
 const nearPoint = (x, y, x1, y1, name) => {
   return Math.abs(x - x1) < 5 && Math.abs(y - y1) < 5 ? name : null
@@ -135,11 +144,45 @@ const useHistory = (initialState) => {
   return [history[index], setState, undo, redo]
 }
 
+const getSvgPathFromStroke = stroke => {
+  if (!stroke.length) return "";
+
+  const d = stroke.reduce(
+    (acc, [x0, y0], i, arr) => {
+      const [x1, y1] = arr[(i + 1) % arr.length];
+      acc.push(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2);
+      return acc;
+    },
+    ["M", ...stroke[0], "Q"]
+  );
+
+  d.push("Z");
+  return d.join(" ");
+};
+
+
+const drawElement = (roughCanvas, context, element) => {
+  switch (element.type) {
+    case "line":
+    case "rectangle":
+      roughCanvas.draw(element.roughElement);
+      break;
+    case "pencil":
+      { const stroke = getSvgPathFromStroke(getStroke(element.points))
+      context.fill(new Path2D(stroke))
+      break; }
+    default:
+      throw new Error(`Type not recognised: ${element.type}`);
+  }
+};
+
+const adjustmentRequired = (type) => ['line', 'rectangle'].includes(type)
+
 // 主组件
 function App() {
   const [elements, setElements, undo, redo] = useHistory([]); // 存储所有元素
   const [action, setAction] = useState('none'); // 当前操作状态
-  const [tool, setTool] = useState('line'); // 当前工具类型（线条或矩形）
+  const [tool, setTool] = useState('pencil'); // 当前工具类型（线条或矩形）
   const [selectedElement, setSelectedElement] = useState(null); // 当前选中的元素
 
   // 每次元素更新后，重新绘制 canvas
@@ -149,7 +192,7 @@ function App() {
     context.clearRect(0, 0, canvas.width, canvas.height)
 
     const roughCanvas = rough.canvas(canvas)
-    elements.forEach(({ roughElement }) => roughCanvas.draw(roughElement))
+    elements.forEach((element) => drawElement(roughCanvas, context, element))
   }, [elements]);
 
 
@@ -172,12 +215,26 @@ function App() {
 
   // 更新元素（用于绘制或调整）
   const updateElement = (id, x1, y1, x2, y2, type) => {
-    const updateElement = createElement(id, x1, y1, x2, y2, type)
+    const elementsCopy = [...elements];
 
-    const elementsCopy = [...elements]
-    elementsCopy[id] = updateElement
-    setElements(elementsCopy, true)
-  }
+    switch (type) {
+      case "line":
+      case "rectangle":
+        elementsCopy[id] = createElement(id, x1, y1, x2, y2, type);
+        break;
+      case "pencil":
+        elementsCopy[id].points = [
+          ...elementsCopy[id].points,
+          { x: x2, y: y2 }
+        ];
+        break;
+      default:
+        throw new Error(`Type not recognised: ${type}`);
+    }
+
+    setElements(elementsCopy, true);
+  };
+
 
   // 鼠标按下事件
   const handleMouseDown = (event) => {
@@ -243,7 +300,7 @@ function App() {
     if (selectedElement) {
       const index = selectedElement.id
       const { id, type } = elements[index]
-      if (action === 'drawing' || action === 'resizing') {
+      if ((action === 'drawing' || action === 'resizing') & adjustmentRequired(type)) {
         // 调整坐标，以确保矩形的左上角和右下角正确
         const { x1, y1, x2, y2 } = adjustElementCoordinates(elements[index])
         updateElement(id, x1, y1, x2, y2, type)
@@ -256,7 +313,7 @@ function App() {
   // 渲染 UI
   return (
     <div>
-      <div style={{ position: "fixed" }}>
+      <div style={{position: "fixed"}}>
         {/* 工具选择 - 选择工具 */}
         <input
           type="radio"
@@ -283,6 +340,13 @@ function App() {
           onChange={() => setTool("rectangle")}
         />
         <label htmlFor="rectangle">Rectangle</label>
+        <input
+          type="radio"
+          id="pencil"
+          checked={tool === "pencil"}
+          onChange={() => setTool("pencil")}
+        />
+        <label htmlFor="pencil">Pencil</label>
       </div>
       <div style={{position: 'fixed', bottom: 0, padding: 10}}>
         <button onClick={undo}>Undo</button>

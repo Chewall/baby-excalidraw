@@ -265,12 +265,18 @@ function App() {
     const { clientX, clientY } = event
     if (tool === 'selection') {
       // 选择工具：根据鼠标位置选中元素
-      const element = getElementAtPosition(clientX, clientY, elements)
+      const element = getElementAtPosition(clientX, clientY, elements);
       if (element) {
-        const offsetX = clientX - element.x1
-        const offsetY = clientY - element.y1
-        setSelectedElement({ ...element, offsetX, offsetY })
-        setElements(prevState => prevState)
+        if (element.type === "pencil") {
+          const xOffsets = element.points.map(point => clientX - point.x);
+          const yOffsets = element.points.map(point => clientY - point.y);
+          setSelectedElement( { ...element, xOffsets, yOffsets });
+        } else {
+          const offsetX = clientX - element.x1;
+          const offsetY = clientY - element.y1;
+          setSelectedElement({ ...element, offsetX, offsetY });
+        }
+        setElements(prevState => prevState);
         if (element.position === "inside") {
           setAction("moving");
         } else {
@@ -305,12 +311,23 @@ function App() {
       updateElement(index, x1, y1, clientX, clientY, tool)
     } else if (action === 'moving') {
       // 如果正在移动元素，计算新的位置
-      const { id, x1, x2, y1, y2, type, offsetX, offsetY } = selectedElement
-      const width = x2 - x1
-      const height = y2 - y1
-      const nexX1 = clientX - offsetX
-      const nexY1 = clientY - offsetY
-      updateElement(id, nexX1, nexY1, nexX1 + width, nexY1 + height, type)
+      if (selectedElement.type === "pencil") {
+        const newPoints = selectedElement.points.map((_, index) => ({
+          x: clientX - selectedElement.xOffsets[index],
+          y: clientY - selectedElement.yOffsets[index],
+        }));
+        //添加连线功能
+        const elementsCopy = [...elements];
+        elementsCopy[selectedElement.id].points = newPoints;
+        setElements(elementsCopy, true);
+      } else {
+        const { id, x1, x2, y1, y2, type, offsetX, offsetY } = selectedElement;
+        const width = x2 - x1;
+        const height = y2 - y1;
+        const newX1 = clientX - offsetX;
+        const newY1 = clientY - offsetY;
+        updateElement(id, newX1, newY1, newX1 + width, newY1 + height, type);
+      }
     } else if (action === 'resizing') {
       // 如果正在调整大小，实时更新尺寸
       const { id, type, position, ...coordinates } = selectedElement
@@ -324,7 +341,7 @@ function App() {
     if (selectedElement) {
       const index = selectedElement.id
       const { id, type } = elements[index]
-      if ((action === 'drawing' || action === 'resizing') & adjustmentRequired(type)) {
+      if ((action === 'drawing' || action === 'resizing') && adjustmentRequired(type)) {
         // 调整坐标，以确保矩形的左上角和右下角正确
         const { x1, y1, x2, y2 } = adjustElementCoordinates(elements[index])
         updateElement(id, x1, y1, x2, y2, type)
